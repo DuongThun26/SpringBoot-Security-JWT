@@ -3,17 +3,24 @@ package com.example.test.service;
 import com.example.test.entity.UserEntity;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
 import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.text.ParseException;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 @Service
 @RequiredArgsConstructor
 public class JWTService {
-    private String secrekey = "xGwQ7JFVZuVHF6BFGlhGTr8dOfQRAbe9qpuStjIwZzTZuFod7d2NqVO0glxqaz4YHbHOliCHRAf2yX3Rk5c4Ce";
+    @Value("${secretkey}")
+    private String secretkey;
+
     public String generateAccessToken(UserEntity user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
         Date issueTime = new Date();
@@ -26,14 +33,15 @@ public class JWTService {
         Payload payload = new Payload(claimsSet.toJSONObject());
         JWSObject jwsObject = new JWSObject(header, payload);
         try {
-            jwsObject.sign(new MACSigner(secrekey));
+            jwsObject.sign(new MACSigner(secretkey));
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
         return jwsObject.serialize();
     }
 
-    public String generateRefreshTokenToken(UserEntity user) {
+
+    public String generateRefreshToken(UserEntity user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
         Date issueTime = new Date();
         Date expirationTime = Date.from(issueTime.toInstant().plus(30, ChronoUnit.DAYS));
@@ -45,10 +53,18 @@ public class JWTService {
         Payload payload = new Payload(claimsSet.toJSONObject());
         JWSObject jwsObject = new JWSObject(header, payload);
         try {
-            jwsObject.sign(new MACSigner(secrekey));
+            jwsObject.sign(new MACSigner(secretkey));
         } catch (JOSEException e) {
             throw new RuntimeException(e);
         }
         return jwsObject.serialize();
+    }
+    public boolean verifyToken(String token) throws ParseException, JOSEException {
+        SignedJWT signedJWT = SignedJWT.parse(token);
+        Date expirationTime = signedJWT.getJWTClaimsSet().getExpirationTime();
+        if((new Date()).after(expirationTime)){
+            return false;
+        }
+        return signedJWT.verify(new MACVerifier(secretkey));
     }
 }

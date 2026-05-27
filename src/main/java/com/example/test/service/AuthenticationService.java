@@ -26,7 +26,7 @@ public class AuthenticationService {
         UserEntity user = (UserEntity) authenticate.getPrincipal();
 
         String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshTokenToken(user);
+        String refreshToken = jwtService.generateRefreshToken(user);
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
